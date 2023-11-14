@@ -4,8 +4,7 @@
   "version": "5.0.0-alpha.3",
   "command": {
     "publish": {
-      "message": "chore: release",
-      "registry": "https://verdaccio.indigo.si"
+      "message": "chore: release"
     }
   }
 }
