@@ -1,14 +1,16 @@
 import { CrudService } from '../services';
 import { CrudRequest, GetManyDefaultResponse, CreateManyDto } from '../interfaces';
+import { Mapper } from '@automapper/core';
 
-export interface CrudController<T> {
-  service: CrudService<T>;
-  getManyBase?(req: CrudRequest): Promise<GetManyDefaultResponse<T> | T[]>;
-  getOneBase?(req: CrudRequest): Promise<T>;
-  createOneBase?(req: CrudRequest, dto: T): Promise<T>;
-  createManyBase?(req: CrudRequest, dto: CreateManyDto<T>): Promise<T[]>;
-  updateOneBase?(req: CrudRequest, dto: T): Promise<T>;
-  replaceOneBase?(req: CrudRequest, dto: T): Promise<T>;
-  deleteOneBase?(req: CrudRequest): Promise<void | T>;
-  recoverOneBase?(req: CrudRequest): Promise<void | T>;
+export interface CrudController<T, C = T, R = T, U = T, G = T> {
+  service: CrudService<T, C, R, U>;
+  mapper?: Mapper;
+  getManyBase?(req: CrudRequest): Promise<GetManyDefaultResponse<G> | G[]>;
+  getOneBase?(req: CrudRequest): Promise<G>;
+  createOneBase?(req: CrudRequest, dto: C): Promise<G>;
+  createManyBase?(req: CrudRequest, dto: CreateManyDto<C>): Promise<G[]>;
+  updateOneBase?(req: CrudRequest, dto: U): Promise<G>;
+  replaceOneBase?(req: CrudRequest, dto: R): Promise<G>;
+  deleteOneBase?(req: CrudRequest): Promise<void | G>;
+  recoverOneBase?(req: CrudRequest): Promise<void | G>;
 }

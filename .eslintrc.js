@@ -30,7 +30,9 @@ module.exports = {
       'error',
       {
         default: [
+          // Index signature
           'signature',
+          // Fields
           'public-static-field',
           'protected-static-field',
           'private-static-field',
@@ -39,10 +41,12 @@ module.exports = {
           'private-instance-field',
           'public-abstract-field',
           'protected-abstract-field',
-          'private-abstract-field',
+          'abstract-field',
+          // Constructors
           'public-constructor',
           'protected-constructor',
           'private-constructor',
+          // Methods
           'public-static-method',
           'protected-static-method',
           'private-static-method',
@@ -51,9 +55,11 @@ module.exports = {
           'private-instance-method',
           'public-abstract-method',
           'protected-abstract-method',
-          'private-abstract-method',
+          'abstract-method',
         ],
       },
     ],
+    "no-unused-vars": "warn",
+    "@typescript-eslint/no-unused-vars": "warn",
   },
 };

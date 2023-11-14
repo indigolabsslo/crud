@@ -3,11 +3,12 @@ import {
   CrudRequest,
   CrudRequestOptions,
   CrudService,
+  CustomOperators,
   GetManyDefaultResponse,
   JoinOption,
   JoinOptions,
   QueryOptions,
-} from '@nestjsx/crud';
+} from '@indigolabs/crud';
 import {
   ParsedRequestParams,
   QueryFilter,
@@ -16,10 +17,10 @@ import {
   SCondition,
   SConditionKey,
   ComparisonOperator,
-} from '@nestjsx/crud-request';
-import { ClassType, hasLength, isArrayFull, isObject, isUndefined, objKeys, isNil, isNull } from '@nestjsx/util';
+} from '@indigolabs/crud-request';
+import { ClassType, hasLength, isArrayFull, isObject, isUndefined, objKeys, isNil, isNull } from '@indigolabs/util';
 import { oO } from '@zmotivat0r/o0';
-import { plainToClass } from 'class-transformer';
+import { plainToClass, plainToInstance } from 'class-transformer';
 import {
   Brackets,
   DeepPartial,
@@ -28,7 +29,9 @@ import {
   SelectQueryBuilder,
   DataSourceOptions,
   EntityMetadata,
+  WhereExpressionBuilder,
 } from 'typeorm';
+import { Mapper } from '@automapper/core';
 
 interface IAllowedRelation {
   alias?: string;
@@ -40,7 +43,7 @@ interface IAllowedRelation {
   allowedColumns: string[];
 }
 
-export class TypeOrmCrudService<T> extends CrudService<T> {
+export class TypeOrmCrudService<T, C = T, R = T, U = T> extends CrudService<T, C, R, U> {
   protected dbName: DataSourceOptions['type'];
 
   protected entityColumns: string[];
@@ -60,7 +63,10 @@ export class TypeOrmCrudService<T> extends CrudService<T> {
     /((%27)|(\'))union/gi,
   ];
 
-  constructor(protected repo: Repository<T>) {
+  constructor(
+    protected repo: Repository<T>,
+    protected mapper: Mapper,
+  ) {
     super();
 
     this.dbName = this.repo.metadata.connection.options.type;
@@ -110,9 +116,15 @@ export class TypeOrmCrudService<T> extends CrudService<T> {
    * @param req
    * @param dto
    */
-  public async createOne(req: CrudRequest, dto: T | Partial<T>): Promise<T> {
+  public async createOne(
+    req: CrudRequest,
+    dto: C | Partial<C>,
+    cClass: new (...args: any[]) => C,
+    tClass: new (...args: any[]) => T,
+  ): Promise<T> {
     const { returnShallow } = req.options.routes.createOneBase;
-    const entity = this.prepareEntityBeforeSave(dto, req.parsed);
+    let entity = this.prepareEntityBeforeSave(dto, req.parsed, cClass, tClass);
+    entity = await this.loadRelations(entity, dto);
 
     /* istanbul ignore if */
     if (!entity) {
@@ -141,13 +153,24 @@ export class TypeOrmCrudService<T> extends CrudService<T> {
    * @param req
    * @param dto
    */
-  public async createMany(req: CrudRequest, dto: CreateManyDto<T | Partial<T>>): Promise<T[]> {
+  public async createMany(
+    req: CrudRequest,
+    dto: CreateManyDto<C | Partial<C>>,
+    cClass: new (...args: any[]) => C,
+    tClass: new (...args: any[]) => T,
+  ): Promise<T[]> {
     /* istanbul ignore if */
     if (!isObject(dto) || !isArrayFull(dto.bulk)) {
       this.throwBadRequestException('Empty data. Nothing to save.');
     }
 
-    const bulk = dto.bulk.map((one) => this.prepareEntityBeforeSave(one, req.parsed)).filter((d) => !isUndefined(d));
+    const bulk = dto.bulk
+      .map(async (one) => {
+        let entity = this.prepareEntityBeforeSave(one, req.parsed, cClass, tClass);
+        entity = await this.loadRelations(entity, one);
+        return entity;
+      })
+      .filter((d) => !isUndefined(d));
 
     /* istanbul ignore if */
     if (!hasLength(bulk)) {
@@ -162,15 +185,22 @@ export class TypeOrmCrudService<T> extends CrudService<T> {
    * @param req
    * @param dto
    */
-  public async updateOne(req: CrudRequest, dto: T | Partial<T>): Promise<T> {
+  public async updateOne(
+    req: CrudRequest,
+    dto: U | Partial<U>,
+    uClass: new (...args: any[]) => U,
+    tClass: new (...args: any[]) => T,
+  ): Promise<T> {
     const { allowParamsOverride, returnShallow } = req.options.routes.updateOneBase;
     const paramsFilters = this.getParamFilters(req.parsed);
-    const found = await this.getOneOrFail(req, returnShallow);
+    let found = (await this.getOneOrFail(req, returnShallow)) as T | Partial<T>;
+    found = this.mutateEntityWithDto(found, dto, tClass, uClass);
+    // TODO: Check what to do with toSave and how to update entity
     const toSave = !allowParamsOverride
-      ? { ...found, ...dto, ...paramsFilters, ...req.parsed.authPersist }
-      : { ...found, ...dto, ...req.parsed.authPersist };
+      ? { ...found, ...paramsFilters, ...req.parsed.authPersist }
+      : { ...found, ...req.parsed.authPersist };
     const updated = await this.repo.save(
-      plainToClass(this.entityType, toSave, req.parsed.classTransformOptions) as unknown as DeepPartial<T>,
+      plainToInstance(this.entityType, toSave, req.parsed.classTransformOptions) as unknown as DeepPartial<T>,
     );
 
     if (returnShallow) {
@@ -199,20 +229,27 @@ export class TypeOrmCrudService<T> extends CrudService<T> {
    * @param req
    * @param dto
    */
-  public async replaceOne(req: CrudRequest, dto: T | Partial<T>): Promise<T> {
+  public async replaceOne(
+    req: CrudRequest,
+    dto: R | Partial<R>,
+    rClass: new (...args: any[]) => R,
+    tClass: new (...args: any[]) => T,
+  ): Promise<T> {
     const { allowParamsOverride, returnShallow } = req.options.routes.replaceOneBase;
     const paramsFilters = this.getParamFilters(req.parsed);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [_, found] = await oO(this.getOneOrFail(req, returnShallow));
+    this.mutateEntityWithDto(found, dto, tClass, rClass);
+    // TODO: Check what to do with toSave and how to update entity
     const toSave = !allowParamsOverride
-      ? { ...(found || {}), ...dto, ...paramsFilters, ...req.parsed.authPersist }
+      ? { ...(found || {}), ...paramsFilters, ...req.parsed.authPersist }
       : {
           ...(found || /* istanbul ignore next */ {}),
           ...paramsFilters,
-          ...dto,
           ...req.parsed.authPersist,
         };
     const replaced = await this.repo.save(
-      plainToClass(this.entityType, toSave, req.parsed.classTransformOptions) as unknown as DeepPartial<T>,
+      plainToInstance(this.entityType, toSave, req.parsed.classTransformOptions) as unknown as DeepPartial<T>,
     );
 
     if (returnShallow) {
@@ -238,13 +275,22 @@ export class TypeOrmCrudService<T> extends CrudService<T> {
     const { returnDeleted } = req.options.routes.deleteOneBase;
     const found = await this.getOneOrFail(req, returnDeleted);
     const toReturn = returnDeleted
-      ? plainToClass(this.entityType, { ...found }, req.parsed.classTransformOptions)
+      ? plainToInstance(this.entityType, { ...found }, req.parsed.classTransformOptions)
       : undefined;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const deleted =
       req.options.query.softDelete === true
         ? await this.repo.softRemove(found as unknown as DeepPartial<T>)
         : await this.repo.remove(found);
     return toReturn;
+  }
+
+  /**
+   * Load relations
+   * @param entity
+   */
+  public async loadRelations(entity: T, dto: C | Partial<C> | R | Partial<R> | U | Partial<U>): Promise<T> {
+    return entity;
   }
 
   public getParamFilters(parsed: CrudRequest['parsed']): ObjectLiteral {
@@ -373,7 +419,7 @@ export class TypeOrmCrudService<T> extends CrudService<T> {
     return builder.getMany();
   }
 
-  protected onInitMapEntityColumns() {
+  protected onInitMapEntityColumns(): void {
     this.entityColumns = this.repo.metadata.columns.map((prop) => {
       // In case column is an embedded, use the propertyPath to get complete path
       if (prop.embeddedMetadata) {
@@ -408,7 +454,12 @@ export class TypeOrmCrudService<T> extends CrudService<T> {
     return found;
   }
 
-  protected prepareEntityBeforeSave(dto: T | Partial<T>, parsed: CrudRequest['parsed']): T {
+  protected prepareEntityBeforeSave(
+    dto: C | Partial<C>,
+    parsed: CrudRequest['parsed'],
+    cClass: new (...args: any[]) => C,
+    tClass: new (...args: any[]) => T,
+  ): T {
     /* istanbul ignore if */
     if (!isObject(dto)) {
       return undefined;
@@ -425,9 +476,8 @@ export class TypeOrmCrudService<T> extends CrudService<T> {
       return undefined;
     }
 
-    return dto instanceof this.entityType
-      ? Object.assign(dto, parsed.authPersist)
-      : plainToClass(this.entityType, { ...dto, ...parsed.authPersist }, parsed.classTransformOptions);
+    const entity = this.mapDtoToEntity(dto, cClass, tClass);
+    return plainToClass(this.entityType, { ...entity, ...parsed.authPersist }, parsed.classTransformOptions);
   }
 
   protected getAllowedColumns(columns: string[], options: QueryOptions): string[] {
@@ -547,7 +597,7 @@ export class TypeOrmCrudService<T> extends CrudService<T> {
     }
   }
 
-  protected setJoin(cond: QueryJoin, joinOptions: JoinOptions, builder: SelectQueryBuilder<T>) {
+  protected setJoin(cond: QueryJoin, joinOptions: JoinOptions, builder: SelectQueryBuilder<T>): boolean {
     const options = joinOptions[cond.field];
 
     if (!options) {
@@ -580,17 +630,31 @@ export class TypeOrmCrudService<T> extends CrudService<T> {
     }
   }
 
-  protected setAndWhere(cond: QueryFilter, i: any, builder: SelectQueryBuilder<T>) {
-    const { str, params } = this.mapOperatorsToQuery(cond, `andWhere${i}`);
+  protected setAndWhere(
+    cond: QueryFilter,
+    i: any,
+    builder: SelectQueryBuilder<T> | WhereExpressionBuilder,
+    customOperators: CustomOperators,
+  ): void {
+    const { str, params } = this.mapOperatorsToQuery(cond, `andWhere${i}`, customOperators);
     builder.andWhere(str, params);
   }
 
-  protected setOrWhere(cond: QueryFilter, i: any, builder: SelectQueryBuilder<T>) {
-    const { str, params } = this.mapOperatorsToQuery(cond, `orWhere${i}`);
+  protected setOrWhere(
+    cond: QueryFilter,
+    i: any,
+    builder: SelectQueryBuilder<T> | WhereExpressionBuilder,
+    customOperators: CustomOperators,
+  ): void {
+    const { str, params } = this.mapOperatorsToQuery(cond, `orWhere${i}`, customOperators);
     builder.orWhere(str, params);
   }
 
-  protected setSearchCondition(builder: SelectQueryBuilder<T>, search: SCondition, condition: SConditionKey = '$and') {
+  protected setSearchCondition(
+    builder: SelectQueryBuilder<T>,
+    search: SCondition,
+    condition: SConditionKey = '$and',
+  ): void {
     /* istanbul ignore else */
     if (isObject(search)) {
       const keys = objKeys(search);
@@ -704,7 +768,7 @@ export class TypeOrmCrudService<T> extends CrudService<T> {
     }
   }
 
-  protected builderAddBrackets(builder: SelectQueryBuilder<T>, condition: SConditionKey, brackets: Brackets) {
+  protected builderAddBrackets(builder: SelectQueryBuilder<T>, condition: SConditionKey, brackets: Brackets): void {
     if (condition === '$and') {
       builder.andWhere(brackets);
     } else {
@@ -718,7 +782,7 @@ export class TypeOrmCrudService<T> extends CrudService<T> {
     field: string,
     value: any,
     operator: ComparisonOperator = '$eq',
-  ) {
+  ): void {
     const time = process.hrtime();
     const index = `${field}${time[0]}${time[1]}`;
     const args = [{ field, operator: isNull(value) ? '$isnull' : operator, value }, index, builder];
@@ -731,7 +795,7 @@ export class TypeOrmCrudService<T> extends CrudService<T> {
     condition: SConditionKey,
     field: string,
     object: any,
-  ) {
+  ): void {
     /* istanbul ignore else */
     if (isObject(object)) {
       const operators = objKeys(object);
@@ -800,17 +864,17 @@ export class TypeOrmCrudService<T> extends CrudService<T> {
     return Array.from(select);
   }
 
-  protected getSort(query: ParsedRequestParams, options: QueryOptions) {
+  protected getSort(query: ParsedRequestParams, options: QueryOptions): ObjectLiteral {
     return query.sort && query.sort.length
       ? this.mapSort(query.sort)
       : options.sort && options.sort.length
-      ? this.mapSort(options.sort)
-      : {};
+        ? this.mapSort(options.sort)
+        : {};
   }
 
-  protected getFieldWithAlias(field: string, sort = false) {
+  protected getFieldWithAlias(field: string, sort = false): string {
     /* istanbul ignore next */
-    const i = ['mysql','mariadb'].includes(this.dbName) ? '`' : '"';
+    const i = ['mysql', 'mariadb'].includes(this.dbName) ? '`' : '"';
     const cols = field.split('.');
 
     switch (cols.length) {
@@ -829,7 +893,7 @@ export class TypeOrmCrudService<T> extends CrudService<T> {
     }
   }
 
-  protected mapSort(sort: QuerySort[]) {
+  protected mapSort(sort: QuerySort[]): ObjectLiteral {
     const params: ObjectLiteral = {};
 
     for (let i = 0; i < sort.length; i++) {
@@ -841,11 +905,16 @@ export class TypeOrmCrudService<T> extends CrudService<T> {
     return params;
   }
 
-  protected mapOperatorsToQuery(cond: QueryFilter, param: any): { str: string; params: ObjectLiteral } {
+  protected mapOperatorsToQuery(
+    cond: QueryFilter,
+    param: any,
+    customOperators: CustomOperators = {},
+  ): { str: string; params: ObjectLiteral } {
     const field = this.getFieldWithAlias(cond.field);
     const likeOperator = this.dbName === 'postgres' ? 'ILIKE' : /* istanbul ignore next */ 'LIKE';
     let str: string;
-    let params: ObjectLiteral;
+    // NOTE: may be overridden by specific operators
+    let params: ObjectLiteral = { [param]: cond.value };
 
     if (cond.operator[0] !== '$') {
       cond.operator = ('$' + cond.operator) as ComparisonOperator;
@@ -964,17 +1033,61 @@ export class TypeOrmCrudService<T> extends CrudService<T> {
         str = `LOWER(${field}) NOT IN (:...${param})`;
         break;
 
+      case '$contArr':
+        this.checkFilterIsArray(cond);
+        str = `${field} @> ARRAY[:...${param}]`;
+        break;
+
+      case '$intersectsArr':
+        this.checkFilterIsArray(cond);
+        str = `${field} && ARRAY[:...${param}]`;
+        break;
+
       /* istanbul ignore next */
       default:
-        str = `${field} = :${param}`;
+        const customOperator = customOperators[cond.operator];
+        if (!customOperator) {
+          str = `${field} = :${param}`;
+          break;
+        }
+
+        try {
+          if (customOperator.isArray) {
+            this.checkFilterIsArray(cond);
+          }
+          str = customOperator.query(field, param);
+          if (customOperator.params) {
+            params = customOperator.params;
+          }
+        } catch (error) {
+          this.throwBadRequestException(`Invalid custom operator '${field}' query`);
+        }
         break;
     }
 
-    if (typeof params === 'undefined') {
-      params = { [param]: cond.value };
-    }
-
     return { str, params };
+  }
+
+  protected mapDtoToEntity(
+    dto: C | Partial<C>,
+    dClass: new (...args: any[]) => C,
+    eClass: new (...args: any[]) => T,
+  ): T {
+    return this.mapper.map(dto, dClass, eClass);
+  }
+
+  protected mutateEntityWithDto(
+    entity: T | Partial<T>,
+    dto: R | Partial<R> | U | Partial<U>,
+    eClass: new (...args: any[]) => T,
+    dClass: new (...args: any[]) => R | U,
+  ): T | Partial<T> {
+    if (this.mapper) {
+      this.mapper.mutate(dto, entity, dClass, eClass);
+    } else {
+      entity = { ...entity, ...dto };
+    }
+    return entity;
   }
 
   private checkFilterIsArray(cond: QueryFilter, withLength?: boolean) {

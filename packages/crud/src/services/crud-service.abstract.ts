@@ -1,10 +1,10 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { ParsedRequestParams } from '@nestjsx/crud-request';
-import { objKeys } from '@nestjsx/util';
+import { ParsedRequestParams } from '@indigolabs/crud-request';
+import { objKeys } from '@indigolabs/util';
 
 import { CreateManyDto, CrudRequest, CrudRequestOptions, GetManyDefaultResponse, QueryOptions } from '../interfaces';
 
-export abstract class CrudService<T> {
+export abstract class CrudService<T, C = T, R = T, U = T> {
   throwBadRequestException(msg?: unknown): BadRequestException {
     throw new BadRequestException(msg);
   }
@@ -85,15 +85,37 @@ export abstract class CrudService<T> {
 
   abstract getOne(req: CrudRequest): Promise<T>;
 
-  abstract createOne(req: CrudRequest, dto: T | Partial<T>): Promise<T>;
+  abstract createOne(
+    req: CrudRequest,
+    dto: C | Partial<C>,
+    cClass: new (...args: any[]) => C,
+    tClass: new (...args: any[]) => T,
+  ): Promise<T>;
 
-  abstract createMany(req: CrudRequest, dto: CreateManyDto): Promise<T[]>;
+  abstract createMany(
+    req: CrudRequest,
+    dto: CreateManyDto<C>,
+    cClass: new (...args: any[]) => C,
+    tClass: new (...args: any[]) => T,
+  ): Promise<T[]>;
 
-  abstract updateOne(req: CrudRequest, dto: T | Partial<T>): Promise<T>;
+  abstract updateOne(
+    req: CrudRequest,
+    dto: U | Partial<U>,
+    uClass: new (...args: any[]) => U,
+    tClass: new (...args: any[]) => T,
+  ): Promise<T>;
 
-  abstract replaceOne(req: CrudRequest, dto: T | Partial<T>): Promise<T>;
+  abstract replaceOne(
+    req: CrudRequest,
+    dto: R | Partial<R>,
+    rClass: new (...args: any[]) => R,
+    tClass: new (...args: any[]) => T,
+  ): Promise<T>;
 
   abstract deleteOne(req: CrudRequest): Promise<void | T>;
 
   abstract recoverOne(req: CrudRequest): Promise<void | T>;
+
+  abstract loadRelations(entity: T, dto: C | Partial<C> | R | Partial<R> | U | Partial<U>): Promise<T>;
 }

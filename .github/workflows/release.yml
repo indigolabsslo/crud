@@ -23,7 +23,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Install
-        run: yarn boot
+        run: yarn install
 
       - name: Build
         run: yarn build
