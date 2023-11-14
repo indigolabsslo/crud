@@ -117,5 +117,5 @@ export abstract class CrudService<T, C = T, R = T, U = T> {
 
   abstract recoverOne(req: CrudRequest): Promise<void | T>;
 
-  abstract loadRelations(entity: T, dto: C | Partial<C> | R | Partial<R> | U | Partial<U>): Promise<T>;
+  abstract loadRelations(entity: T, dto: C | Partial<C> | R | Partial<R> | U | Partial<U>): Promise<T | Partial<T>>;
 }

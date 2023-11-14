@@ -195,6 +195,7 @@ export class TypeOrmCrudService<T, C = T, R = T, U = T> extends CrudService<T, C
     const paramsFilters = this.getParamFilters(req.parsed);
     let found = (await this.getOneOrFail(req, returnShallow)) as T | Partial<T>;
     found = this.mutateEntityWithDto(found, dto, tClass, uClass);
+    found = await this.loadRelations(found, dto);
     // TODO: Check what to do with toSave and how to update entity
     const toSave = !allowParamsOverride
       ? { ...found, ...paramsFilters, ...req.parsed.authPersist }
@@ -237,9 +238,10 @@ export class TypeOrmCrudService<T, C = T, R = T, U = T> extends CrudService<T, C
   ): Promise<T> {
     const { allowParamsOverride, returnShallow } = req.options.routes.replaceOneBase;
     const paramsFilters = this.getParamFilters(req.parsed);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const [_, found] = await oO(this.getOneOrFail(req, returnShallow));
-    this.mutateEntityWithDto(found, dto, tClass, rClass);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars, no-unused-vars, prefer-const
+    let [_, found] = (await oO(this.getOneOrFail(req, returnShallow))) as [unknown, T | Partial<T>];
+    found = await this.mutateEntityWithDto(found, dto, tClass, rClass);
+    found = await this.loadRelations(found, dto);
     // TODO: Check what to do with toSave and how to update entity
     const toSave = !allowParamsOverride
       ? { ...(found || {}), ...paramsFilters, ...req.parsed.authPersist }
@@ -289,7 +291,10 @@ export class TypeOrmCrudService<T, C = T, R = T, U = T> extends CrudService<T, C
    * Load relations
    * @param entity
    */
-  public async loadRelations(entity: T, dto: C | Partial<C> | R | Partial<R> | U | Partial<U>): Promise<T> {
+  public async loadRelations(
+    entity: T | Partial<T>,
+    dto: C | Partial<C> | R | Partial<R> | U | Partial<U>,
+  ): Promise<T | Partial<T>> {
     return entity;
   }
 
@@ -459,7 +464,7 @@ export class TypeOrmCrudService<T, C = T, R = T, U = T> extends CrudService<T, C
     parsed: CrudRequest['parsed'],
     cClass: new (...args: any[]) => C,
     tClass: new (...args: any[]) => T,
-  ): T {
+  ): T | Partial<T> {
     /* istanbul ignore if */
     if (!isObject(dto)) {
       return undefined;
