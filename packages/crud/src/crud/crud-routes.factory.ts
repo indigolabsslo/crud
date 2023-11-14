@@ -11,7 +11,7 @@ import {
   getOwnPropNames,
   isNil,
   isUndefined,
-} from '@nestjsx/util';
+} from '@indigolabs/util';
 import * as deepmerge from 'deepmerge';
 
 import { R } from './reflection.helper';
@@ -29,7 +29,10 @@ export class CrudRoutesFactory {
 
   protected swaggerModels: any = {};
 
-  constructor(protected target: any, options: CrudOptions) {
+  constructor(
+    protected target: any,
+    options: CrudOptions,
+  ) {
     this.options = options;
     this.create();
   }
@@ -101,8 +104,8 @@ export class CrudRoutesFactory {
     this.options.params = isObjectFull(this.options.params)
       ? this.options.params
       : isObjectFull(CrudConfigService.config.params)
-      ? CrudConfigService.config.params
-      : {};
+        ? CrudConfigService.config.params
+        : {};
     const hasPrimary = this.getPrimaryParams().length > 0;
     if (!hasPrimary) {
       this.options.params['id'] = {
@@ -126,10 +129,10 @@ export class CrudRoutesFactory {
     this.options.serialize.getMany = isFalse(this.options.serialize.getMany)
       ? false
       : this.options.serialize.getMany
-      ? this.options.serialize.getMany
-      : isFalse(this.options.serialize.get)
-      ? /* istanbul ignore next */ false
-      : SerializeHelper.createGetManyDto(this.options.serialize.get, this.modelName);
+        ? this.options.serialize.getMany
+        : isFalse(this.options.serialize.get)
+          ? /* istanbul ignore next */ false
+          : SerializeHelper.createGetManyDto(this.options.serialize.get, this.modelName);
     this.options.serialize.create = isFalse(this.options.serialize.create)
       ? false
       : this.options.serialize.create || this.modelType;
@@ -217,50 +220,110 @@ export class CrudRoutesFactory {
   }
 
   protected getManyBase(name: BaseRouteName) {
-    this.targetProto[name] = function getManyBase(req: CrudRequest) {
-      return this.service.getMany(req);
+    const tClass = this.options.model.type;
+    const gClass = this.options.serialize.get;
+    this.targetProto[name] = async function getManyBase(req: CrudRequest) {
+      const res = await this.service.getMany(req);
+      if (this.mapper && gClass) {
+        return this.mapper.mapArray(res, tClass, gClass);
+      } else {
+        return res;
+      }
     };
   }
 
   protected getOneBase(name: BaseRouteName) {
-    this.targetProto[name] = function getOneBase(req: CrudRequest) {
-      return this.service.getOne(req);
+    const tClass = this.options.model.type;
+    const gClass = this.options.serialize.get;
+    this.targetProto[name] = async function getOneBase(req: CrudRequest) {
+      const res = await this.service.getOne(req);
+      if (this.mapper && gClass) {
+        return this.mapper.map(res, tClass, gClass);
+      } else {
+        return res;
+      }
     };
   }
 
   protected createOneBase(name: BaseRouteName) {
-    this.targetProto[name] = function createOneBase(req: CrudRequest, dto: any) {
-      return this.service.createOne(req, dto);
+    const tClass = this.options.model.type;
+    const cClass = this.options.dto.create;
+    const gClass = this.options.serialize.create;
+    this.targetProto[name] = async function createOneBase(req: CrudRequest, dto: typeof cClass) {
+      const res = await this.service.createOne(req, dto, cClass, tClass);
+      if (this.mapper && gClass) {
+        return this.mapper.map(res, tClass, gClass);
+      } else {
+        return res;
+      }
     };
   }
 
   protected createManyBase(name: BaseRouteName) {
-    this.targetProto[name] = function createManyBase(req: CrudRequest, dto: any) {
-      return this.service.createMany(req, dto);
+    const tClass = this.options.model.type;
+    const cClass = this.options.dto.create;
+    const gClass = this.options.serialize.create;
+    this.targetProto[name] = async function createManyBase(req: CrudRequest, dto: any) {
+      const res = await this.service.createMany(req, dto, cClass, tClass);
+      if (this.mapper && gClass) {
+        return this.mapper.mapArray(res, tClass, gClass);
+      } else {
+        return res;
+      }
     };
   }
 
   protected updateOneBase(name: BaseRouteName) {
-    this.targetProto[name] = function updateOneBase(req: CrudRequest, dto: any) {
-      return this.service.updateOne(req, dto);
+    const tClass = this.options.model.type;
+    const uClass = this.options.dto.update;
+    const gClass = this.options.serialize.update;
+    this.targetProto[name] = async function updateOneBase(req: CrudRequest, dto: any) {
+      const res = await this.service.updateOne(req, dto, uClass, tClass);
+      if (this.mapper && gClass) {
+        return this.mapper.mapArray(res, tClass, gClass);
+      } else {
+        return res;
+      }
     };
   }
 
   protected replaceOneBase(name: BaseRouteName) {
-    this.targetProto[name] = function replaceOneBase(req: CrudRequest, dto: any) {
-      return this.service.replaceOne(req, dto);
+    const tClass = this.options.model.type;
+    const rClass = this.options.dto.replace;
+    const gClass = this.options.serialize.replace;
+    this.targetProto[name] = async function replaceOneBase(req: CrudRequest, dto: any) {
+      const res = await this.service.replaceOne(req, dto, rClass, tClass);
+      if (this.mapper && gClass) {
+        return this.mapper.mapArray(res, tClass, gClass);
+      } else {
+        return res;
+      }
     };
   }
 
   protected deleteOneBase(name: BaseRouteName) {
-    this.targetProto[name] = function deleteOneBase(req: CrudRequest) {
-      return this.service.deleteOne(req);
+    const tClass = this.options.model.type;
+    const gClass = this.options.serialize.delete;
+    this.targetProto[name] = async function deleteOneBase(req: CrudRequest) {
+      const res = await this.service.deleteOne(req);
+      if (this.mapper && res && gClass) {
+        return this.mapper.map(res, tClass, gClass);
+      } else {
+        return res;
+      }
     };
   }
 
   protected recoverOneBase(name: BaseRouteName) {
-    this.targetProto[name] = function recoverOneBase(req: CrudRequest) {
-      return this.service.recoverOne(req);
+    const tClass = this.options.model.type;
+    const gClass = this.options.serialize.recover;
+    this.targetProto[name] = async function recoverOneBase(req: CrudRequest) {
+      const res = await this.service.recoverOne(req);
+      if (this.mapper && gClass) {
+        return this.mapper.map(res, tClass, gClass);
+      } else {
+        return res;
+      }
     };
   }
 
@@ -366,6 +429,8 @@ export class CrudRoutesFactory {
     const allowed = ['createManyBase', 'createOneBase', 'updateOneBase', 'replaceOneBase'] as BaseRouteName[];
     const withBody = isIn(override, allowed);
     const parsedBody = R.getParsedBody(this.targetProto[name]);
+    console.log('PARSED BODY');
+    console.log(parsedBody);
 
     if (withBody && parsedBody) {
       const baseKey = `${RouteParamtypes.BODY}:1`;

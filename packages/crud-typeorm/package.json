@@ -1,5 +1,5 @@
 {
-  "name": "@nestjsx/crud-typeorm",
+  "name": "@indigolabs/crud-typeorm",
   "description": "NestJs CRUD for RESTful APIs - TypeORM",
   "version": "5.0.0-alpha.3",
   "license": "MIT",
@@ -13,10 +13,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/nestjsx/crud.git"
+    "url": "https://github.com/indigolabsslo/crud-automapper.git"
   },
   "bugs": {
-    "url": "https://github.com/nestjsx/crud/issues"
+    "url": "https://github.com/indigolabsslo/crud-automapper/issues"
   },
   "keywords": [
     "typescript",
@@ -32,8 +32,8 @@
     "frameworks"
   ],
   "author": {
-    "name": "Michael Yali",
-    "email": "mihon4ik@gmail.com"
+    "name": "Luka Zlatecan",
+    "email": "luka.zlatecan@gmail.com"
   },
   "scripts": {
     "build": "npx tsc -b"

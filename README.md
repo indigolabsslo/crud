@@ -27,11 +27,11 @@
   <a href="https://github.com/nestjsx/crud/blob/master/LICENSE">
     <img src="https://img.shields.io/github/license/nestjsx/crud.svg" alt="License" />
   </a>
-  <a href="https://www.npmjs.com/package/@nestjsx/crud">
-    <img src="https://img.shields.io/npm/v/@nestjsx/crud.svg" alt="npm version" />
+  <a href="https://www.npmjs.com/package/@indigolabs/crud">
+    <img src="https://img.shields.io/npm/v/@indigolabs/crud.svg" alt="npm version" />
   </a>
   <a href="https://www.npmjs.com/org/nestjsx">
-    <img src="https://img.shields.io/npm/dm/@nestjsx/crud.svg" alt="npm downloads" />
+    <img src="https://img.shields.io/npm/dm/@indigolabs/crud.svg" alt="npm downloads" />
   </a>
   <a href="http://makeapullrequest.com">
     <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square" alt="PRs welcome" />
@@ -60,7 +60,7 @@
 
 <br />
 
-We believe that everyone who's working with NestJs and building some RESTful services and especially some CRUD functionality will find `@nestjsx/crud` microframework very useful.
+We believe that everyone who's working with NestJs and building some RESTful services and especially some CRUD functionality will find `@indigolabs/crud` microframework very useful.
 
 ## Features
 
@@ -84,11 +84,13 @@ We believe that everyone who's working with NestJs and building some RESTful ser
 
 - :pencil2: Swagger documentation
 
+- :map: [Automapper](https://automapperts.netlify.app/docs/nestjs) support
+
 ## Packages
 
-- [**@nestjsx/crud**](https://www.npmjs.com/package/@nestjsx/crud) - core package which provides `@Crud()` decorator for endpoints generation, global configuration, validation, helper decorators ([docs](https://github.com/nestjsx/crud/wiki/Controllers#description))
-- [**@nestjsx/crud-request**](https://www.npmjs.com/package/@nestjsx/crud-request) - request builder/parser package which provides `RequestQueryBuilder` class for a frontend usage and `RequestQueryParser` that is being used internally for handling and validating query/path params on a backend side ([docs](https://github.com/nestjsx/crud/wiki/Requests#frontend-usage))
-- [**@nestjsx/crud-typeorm**](https://www.npmjs.com/package/@nestjsx/crud-typeorm) - TypeORM package which provides base `TypeOrmCrudService` with methods for CRUD database operations ([docs](https://github.com/nestjsx/crud/wiki/ServiceTypeorm))
+- [**@indigolabs/crud**](https://www.npmjs.com/package/@indigolabs/crud) - core package which provides `@Crud()` decorator for endpoints generation, global configuration, validation, helper decorators ([docs](https://github.com/nestjsx/crud/wiki/Controllers#description))
+- [**@indigolabs/crud-request**](https://www.npmjs.com/package/@indigolabs/crud-request) - request builder/parser package which provides `RequestQueryBuilder` class for a frontend usage and `RequestQueryParser` that is being used internally for handling and validating query/path params on a backend side ([docs](https://github.com/nestjsx/crud/wiki/Requests#frontend-usage))
+- [**@indigolabs/crud-typeorm**](https://www.npmjs.com/package/@indigolabs/crud-typeorm) - TypeORM package which provides base `TypeOrmCrudService` with methods for CRUD database operations ([docs](https://github.com/nestjsx/crud/wiki/ServiceTypeorm))
 
 ## Documentation
 

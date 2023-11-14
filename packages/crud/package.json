@@ -1,5 +1,5 @@
 {
-  "name": "@nestjsx/crud",
+  "name": "@indigolabs/crud",
   "description": "NestJs CRUD for RESTful APIs",
   "version": "5.0.0-alpha.3",
   "license": "MIT",
@@ -13,10 +13,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/nestjsx/crud.git"
+    "url": "https://github.com/indigolabsslo/crud-automapper.git"
   },
   "bugs": {
-    "url": "https://github.com/nestjsx/crud/issues"
+    "url": "https://github.com/indigolabsslo/crud-automapper/issues"
   },
   "keywords": [
     "typescript",
@@ -32,16 +32,16 @@
     "frameworks"
   ],
   "author": {
-    "name": "Michael Yali",
-    "email": "mihon4ik@gmail.com"
+    "name": "Luka Zlatecan",
+    "email": "luka.zlatecan@gmail.com"
   },
   "scripts": {
     "build": "npx tsc -b"
   },
   "dependencies": {
-    "@nestjsx/crud-request": "^5.0.0-alpha.3",
-    "@nestjsx/util": "^5.0.0-alpha.3",
-    "deepmerge": "^3.2.0",
+    "@indigolabs/crud-request": "^5.0.0-alpha.3",
+    "@indigolabs/util": "^5.0.0-alpha.3",
+    "deepmerge": "^4.3.1",
     "pluralize": "^8.0.0"
   },
   "peerDependencies": {
