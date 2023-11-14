@@ -222,10 +222,15 @@ export class CrudRoutesFactory {
   protected getManyBase(name: BaseRouteName) {
     const tClass = this.options.model.type;
     const gClass = this.options.serialize.get;
-    this.targetProto[name] = async function getManyBase(req: CrudRequest) {
+    this.targetProto[name] = async function getManyBase(req) {
       const res = await this.service.getMany(req);
       if (this.mapper && gClass) {
-        return this.mapper.mapArray(res, tClass, gClass);
+        const { parsed, options } = req;
+        if (this.service.decidePagination(parsed, options)) {
+          return { ...res, data: this.mapper.mapArray(res.data, tClass, gClass) };
+        } else {
+          return this.mapper.mapArray(res.data, tClass, gClass);
+        }
       } else {
         return res;
       }

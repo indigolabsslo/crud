@@ -65,7 +65,7 @@ export class TypeOrmCrudService<T, C = T, R = T, U = T> extends CrudService<T, C
 
   constructor(
     protected repo: Repository<T>,
-    protected mapper: Mapper,
+    protected mapper?: Mapper,
   ) {
     super();
 
