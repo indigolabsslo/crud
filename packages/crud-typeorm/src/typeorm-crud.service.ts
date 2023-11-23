@@ -1077,8 +1077,12 @@ export class TypeOrmCrudService<T, C = T, R = T, U = T> extends CrudService<T, C
     dto: C | Partial<C>,
     dClass: new (...args: any[]) => C,
     eClass: new (...args: any[]) => T,
-  ): T {
-    return this.mapper.map(dto, dClass, eClass);
+  ): T | Partial<T> {
+    if (this.mapper) {
+      return this.mapper.map(dto, dClass, eClass);
+    } else {
+      return { ...dto } as T | Partial<T>;
+    }
   }
 
   protected mutateEntityWithDto(
@@ -1108,7 +1112,7 @@ export class TypeOrmCrudService<T, C = T, R = T, U = T> extends CrudService<T, C
       for (let i = 0; i < this.sqlInjectionRegEx.length; i++) {
         /* istanbul ignore else */
         if (this.sqlInjectionRegEx[0].test(field)) {
-          this.throwBadRequestException(`SQL injection detected: "${field}"`);
+          this.throwBadRequestException(`SQL injection ittected: "${field}"`);
         }
       }
     }

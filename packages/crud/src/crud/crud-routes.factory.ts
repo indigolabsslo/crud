@@ -120,6 +120,11 @@ export class CrudRoutesFactory {
       this.options.dto = {};
     }
 
+    // set service
+    if (!isObjectFull(this.options.service)) {
+      this.options.service = {};
+    }
+
     // set serialize
     const serialize = isObjectFull(this.options.serialize) ? this.options.serialize : {};
     this.options.serialize = { ...CrudConfigService.config.serialize, ...serialize };
@@ -252,10 +257,19 @@ export class CrudRoutesFactory {
 
   protected createOneBase(name: BaseRouteName) {
     const tClass = this.options.model.type;
-    const cClass = this.options.dto.create;
+    const cClass = this.options.dto.create ?? tClass;
+    const csClass = this.options.service.create ?? cClass;
     const gClass = this.options.serialize.create;
-    this.targetProto[name] = async function createOneBase(req: CrudRequest, dto: typeof cClass) {
-      const res = await this.service.createOne(req, dto, cClass, tClass);
+    this.targetProto[name] = async function createOneBase(
+      req: CrudRequest,
+      dto: typeof cClass,
+      routeParams?: Partial<typeof csClass>,
+    ) {
+      let dtoService = dto as typeof csClass;
+      if (routeParams) {
+        dtoService = { ...dtoService, ...routeParams };
+      }
+      const res = await this.service.createOne(req, dtoService, csClass, tClass);
       if (this.mapper && gClass) {
         return this.mapper.map(res, tClass, gClass);
       } else {
@@ -266,9 +280,10 @@ export class CrudRoutesFactory {
 
   protected createManyBase(name: BaseRouteName) {
     const tClass = this.options.model.type;
-    const cClass = this.options.dto.create;
+    const cClass = this.options.dto.create ?? tClass;
+    const csClass = this.options.service.create ?? cClass;
     const gClass = this.options.serialize.create;
-    this.targetProto[name] = async function createManyBase(req: CrudRequest, dto: any) {
+    this.targetProto[name] = async function createManyBase(req: CrudRequest, dto: typeof cClass) {
       const res = await this.service.createMany(req, dto, cClass, tClass);
       if (this.mapper && gClass) {
         return this.mapper.mapArray(res, tClass, gClass);
@@ -280,10 +295,19 @@ export class CrudRoutesFactory {
 
   protected updateOneBase(name: BaseRouteName) {
     const tClass = this.options.model.type;
-    const uClass = this.options.dto.update;
+    const uClass = this.options.dto.update ?? tClass;
+    const usClass = this.options.service.update ?? uClass;
     const gClass = this.options.serialize.update;
-    this.targetProto[name] = async function updateOneBase(req: CrudRequest, dto: any) {
-      const res = await this.service.updateOne(req, dto, uClass, tClass);
+    this.targetProto[name] = async function updateOneBase(
+      req: CrudRequest,
+      dto: typeof uClass,
+      routeParams?: Partial<typeof usClass>,
+    ) {
+      let dtoService = dto as typeof usClass;
+      if (routeParams) {
+        dtoService = { ...dtoService, ...routeParams };
+      }
+      const res = await this.service.updateOne(req, dtoService, usClass, tClass);
       if (this.mapper && gClass) {
         return this.mapper.mapArray(res, tClass, gClass);
       } else {
@@ -294,10 +318,19 @@ export class CrudRoutesFactory {
 
   protected replaceOneBase(name: BaseRouteName) {
     const tClass = this.options.model.type;
-    const rClass = this.options.dto.replace;
+    const rClass = this.options.dto.replace ?? tClass;
+    const rsClass = this.options.service.replace ?? rClass;
     const gClass = this.options.serialize.replace;
-    this.targetProto[name] = async function replaceOneBase(req: CrudRequest, dto: any) {
-      const res = await this.service.replaceOne(req, dto, rClass, tClass);
+    this.targetProto[name] = async function replaceOneBase(
+      req: CrudRequest,
+      dto: typeof rClass,
+      routeParams?: Partial<typeof rsClass>,
+    ) {
+      let dtoService = dto as typeof rsClass;
+      if (routeParams) {
+        dtoService = { ...dtoService, ...routeParams };
+      }
+      const res = await this.service.replaceOne(req, dtoService, rsClass, tClass);
       if (this.mapper && gClass) {
         return this.mapper.mapArray(res, tClass, gClass);
       } else {
