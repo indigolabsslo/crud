@@ -31,7 +31,7 @@ import {
   EntityMetadata,
   WhereExpressionBuilder,
 } from 'typeorm';
-import { Mapper } from '@automapper/core';
+import { Mapper, ModelIdentifier } from '@automapper/core';
 
 interface IAllowedRelation {
   alias?: string;
@@ -66,6 +66,9 @@ export class TypeOrmCrudService<T, C = T, R = T, U = T> extends CrudService<T, C
   constructor(
     protected repo: Repository<T>,
     protected mapper?: Mapper,
+    protected createDtoType?: ModelIdentifier<C>,
+    protected replaceDtoType?: ModelIdentifier<R>,
+    protected updateDtoType?: ModelIdentifier<U>,
   ) {
     super();
 
@@ -179,7 +182,7 @@ export class TypeOrmCrudService<T, C = T, R = T, U = T> extends CrudService<T, C
     const { allowParamsOverride, returnShallow } = req.options.routes.updateOneBase;
     const paramsFilters = this.getParamFilters(req.parsed);
     let found = (await this.getOneOrFail(req, returnShallow)) as T;
-    found = this.mutateEntityWithDto(found, dto);
+    found = this.mutateEntityWithUpdateDto(found, dto);
     found = await this.loadRelations(found, dto);
     // TODO: Check what to do with toSave and how to update entity
     const toSave = !allowParamsOverride
@@ -220,7 +223,7 @@ export class TypeOrmCrudService<T, C = T, R = T, U = T> extends CrudService<T, C
     const paramsFilters = this.getParamFilters(req.parsed);
     // eslint-disable-next-line @typescript-eslint/no-unused-vars, no-unused-vars, prefer-const
     let [_, found] = (await oO(this.getOneOrFail(req, returnShallow))) as [unknown, T];
-    found = await this.mutateEntityWithDto(found, dto);
+    found = await this.mutateEntityWithReplaceDto(found, dto);
     found = await this.loadRelations(found, dto);
     // TODO: Check what to do with toSave and how to update entity
     const toSave = !allowParamsOverride
@@ -1047,15 +1050,24 @@ export class TypeOrmCrudService<T, C = T, R = T, U = T> extends CrudService<T, C
 
   protected mapDtoToEntity(dto: C): T {
     if (this.mapper) {
-      return this.mapper.map(dto, typeof dto, this.entityType);
+      return this.mapper.map(dto, this.createDtoType, this.entityType);
     } else {
       return { ...dto } as unknown as T;
     }
   }
 
-  protected mutateEntityWithDto(entity: T, dto: R | U): T {
+  protected mutateEntityWithReplaceDto(entity: T, dto: R): T {
     if (this.mapper) {
-      this.mapper.mutate(dto, entity, typeof dto, this.entityType);
+      this.mapper.mutate(dto, entity, this.replaceDtoType, this.entityType);
+    } else {
+      entity = { ...entity, ...dto };
+    }
+    return entity;
+  }
+
+  protected mutateEntityWithUpdateDto(entity: T, dto: U): T {
+    if (this.mapper) {
+      this.mapper.mutate(dto, entity, this.updateDtoType, this.entityType);
     } else {
       entity = { ...entity, ...dto };
     }
