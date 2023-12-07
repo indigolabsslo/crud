@@ -1,7 +1,7 @@
 {
   "name": "@indigolabs/crud",
   "description": "NestJs CRUD for RESTful APIs",
-  "version": "5.0.0-alpha.8",
+  "version": "5.0.0-alpha.9",
   "license": "MIT",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
@@ -39,8 +39,8 @@
     "build": "npx tsc -b"
   },
   "dependencies": {
-    "@indigolabs/crud-request": "^5.0.0-alpha.8",
-    "@indigolabs/util": "^5.0.0-alpha.8",
+    "@indigolabs/crud-request": "^5.0.0-alpha.9",
+    "@indigolabs/util": "^5.0.0-alpha.9",
     "deepmerge": "^4.3.1",
     "pluralize": "^8.0.0"
   },
