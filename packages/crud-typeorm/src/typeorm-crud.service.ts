@@ -157,13 +157,15 @@ export class TypeOrmCrudService<T, C = T, R = T, U = T> extends CrudService<T, C
       this.throwBadRequestException('Empty data. Nothing to save.');
     }
 
-    const bulk = dto.bulk
-      .map(async (one) => {
-        let entity = this.prepareEntityBeforeSave(one, req.parsed);
-        entity = await this.loadRelations(entity, one);
-        return entity;
-      })
-      .filter((d) => !isUndefined(d));
+    const bulk = (
+      await Promise.all(
+        dto.bulk.map(async (one) => {
+          let entity = this.prepareEntityBeforeSave(one, req.parsed);
+          entity = await this.loadRelations(entity, one);
+          return entity;
+        }),
+      )
+    ).filter((d) => !isUndefined(d));
 
     /* istanbul ignore if */
     if (!hasLength(bulk)) {
