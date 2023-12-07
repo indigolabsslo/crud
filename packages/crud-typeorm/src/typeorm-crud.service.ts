@@ -116,14 +116,9 @@ export class TypeOrmCrudService<T, C = T, R = T, U = T> extends CrudService<T, C
    * @param req
    * @param dto
    */
-  public async createOne(
-    req: CrudRequest,
-    dto: C | Partial<C>,
-    cClass: new (...args: any[]) => C,
-    tClass: new (...args: any[]) => T,
-  ): Promise<T> {
+  public async createOne(req: CrudRequest, dto: C): Promise<T> {
     const { returnShallow } = req.options.routes.createOneBase;
-    let entity = this.prepareEntityBeforeSave(dto, req.parsed, cClass, tClass);
+    let entity = this.prepareEntityBeforeSave(dto, req.parsed);
     entity = await this.loadRelations(entity, dto);
 
     /* istanbul ignore if */
@@ -153,12 +148,7 @@ export class TypeOrmCrudService<T, C = T, R = T, U = T> extends CrudService<T, C
    * @param req
    * @param dto
    */
-  public async createMany(
-    req: CrudRequest,
-    dto: CreateManyDto<C | Partial<C>>,
-    cClass: new (...args: any[]) => C,
-    tClass: new (...args: any[]) => T,
-  ): Promise<T[]> {
+  public async createMany(req: CrudRequest, dto: CreateManyDto<C>): Promise<T[]> {
     /* istanbul ignore if */
     if (!isObject(dto) || !isArrayFull(dto.bulk)) {
       this.throwBadRequestException('Empty data. Nothing to save.');
@@ -166,7 +156,7 @@ export class TypeOrmCrudService<T, C = T, R = T, U = T> extends CrudService<T, C
 
     const bulk = dto.bulk
       .map(async (one) => {
-        let entity = this.prepareEntityBeforeSave(one, req.parsed, cClass, tClass);
+        let entity = this.prepareEntityBeforeSave(one, req.parsed);
         entity = await this.loadRelations(entity, one);
         return entity;
       })
@@ -185,16 +175,11 @@ export class TypeOrmCrudService<T, C = T, R = T, U = T> extends CrudService<T, C
    * @param req
    * @param dto
    */
-  public async updateOne(
-    req: CrudRequest,
-    dto: U | Partial<U>,
-    uClass: new (...args: any[]) => U,
-    tClass: new (...args: any[]) => T,
-  ): Promise<T> {
+  public async updateOne(req: CrudRequest, dto: U): Promise<T> {
     const { allowParamsOverride, returnShallow } = req.options.routes.updateOneBase;
     const paramsFilters = this.getParamFilters(req.parsed);
-    let found = (await this.getOneOrFail(req, returnShallow)) as T | Partial<T>;
-    found = this.mutateEntityWithDto(found, dto, tClass, uClass);
+    let found = (await this.getOneOrFail(req, returnShallow)) as T;
+    found = this.mutateEntityWithDto(found, dto);
     found = await this.loadRelations(found, dto);
     // TODO: Check what to do with toSave and how to update entity
     const toSave = !allowParamsOverride
@@ -230,17 +215,12 @@ export class TypeOrmCrudService<T, C = T, R = T, U = T> extends CrudService<T, C
    * @param req
    * @param dto
    */
-  public async replaceOne(
-    req: CrudRequest,
-    dto: R | Partial<R>,
-    rClass: new (...args: any[]) => R,
-    tClass: new (...args: any[]) => T,
-  ): Promise<T> {
+  public async replaceOne(req: CrudRequest, dto: R): Promise<T> {
     const { allowParamsOverride, returnShallow } = req.options.routes.replaceOneBase;
     const paramsFilters = this.getParamFilters(req.parsed);
     // eslint-disable-next-line @typescript-eslint/no-unused-vars, no-unused-vars, prefer-const
-    let [_, found] = (await oO(this.getOneOrFail(req, returnShallow))) as [unknown, T | Partial<T>];
-    found = await this.mutateEntityWithDto(found, dto, tClass, rClass);
+    let [_, found] = (await oO(this.getOneOrFail(req, returnShallow))) as [unknown, T];
+    found = await this.mutateEntityWithDto(found, dto);
     found = await this.loadRelations(found, dto);
     // TODO: Check what to do with toSave and how to update entity
     const toSave = !allowParamsOverride
@@ -291,10 +271,7 @@ export class TypeOrmCrudService<T, C = T, R = T, U = T> extends CrudService<T, C
    * Load relations
    * @param entity
    */
-  public async loadRelations(
-    entity: T | Partial<T>,
-    dto: C | Partial<C> | R | Partial<R> | U | Partial<U>,
-  ): Promise<T | Partial<T>> {
+  public async loadRelations(entity: T, dto: C | R | U): Promise<T> {
     return entity;
   }
 
@@ -459,12 +436,7 @@ export class TypeOrmCrudService<T, C = T, R = T, U = T> extends CrudService<T, C
     return found;
   }
 
-  protected prepareEntityBeforeSave(
-    dto: C | Partial<C>,
-    parsed: CrudRequest['parsed'],
-    cClass: new (...args: any[]) => C,
-    tClass: new (...args: any[]) => T,
-  ): T | Partial<T> {
+  protected prepareEntityBeforeSave(dto: C, parsed: CrudRequest['parsed']): T {
     /* istanbul ignore if */
     if (!isObject(dto)) {
       return undefined;
@@ -481,7 +453,7 @@ export class TypeOrmCrudService<T, C = T, R = T, U = T> extends CrudService<T, C
       return undefined;
     }
 
-    const entity = this.mapDtoToEntity(dto, cClass, tClass);
+    const entity = this.mapDtoToEntity(dto);
     return plainToClass(this.entityType, { ...entity, ...parsed.authPersist }, parsed.classTransformOptions);
   }
 
@@ -1073,26 +1045,17 @@ export class TypeOrmCrudService<T, C = T, R = T, U = T> extends CrudService<T, C
     return { str, params };
   }
 
-  protected mapDtoToEntity(
-    dto: C | Partial<C>,
-    dClass: new (...args: any[]) => C,
-    eClass: new (...args: any[]) => T,
-  ): T | Partial<T> {
+  protected mapDtoToEntity(dto: C): T {
     if (this.mapper) {
-      return this.mapper.map(dto, dClass, eClass);
+      return this.mapper.map(dto, typeof dto, this.entityType);
     } else {
-      return { ...dto } as T | Partial<T>;
+      return { ...dto } as unknown as T;
     }
   }
 
-  protected mutateEntityWithDto(
-    entity: T | Partial<T>,
-    dto: R | Partial<R> | U | Partial<U>,
-    eClass: new (...args: any[]) => T,
-    dClass: new (...args: any[]) => R | U,
-  ): T | Partial<T> {
+  protected mutateEntityWithDto(entity: T, dto: R | U): T {
     if (this.mapper) {
-      this.mapper.mutate(dto, entity, dClass, eClass);
+      this.mapper.mutate(dto, entity, typeof dto, this.entityType);
     } else {
       entity = { ...entity, ...dto };
     }

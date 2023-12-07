@@ -269,7 +269,7 @@ export class CrudRoutesFactory {
       if (routeParams) {
         dtoService = { ...dtoService, ...routeParams };
       }
-      const res = await this.service.createOne(req, dtoService, csClass, tClass);
+      const res = await this.service.createOne(req, dtoService);
       if (this.mapper && gClass) {
         return this.mapper.map(res, tClass, gClass);
       } else {
@@ -283,8 +283,16 @@ export class CrudRoutesFactory {
     const cClass = this.options.dto.create ?? tClass;
     const csClass = this.options.service.create ?? cClass;
     const gClass = this.options.serialize.create;
-    this.targetProto[name] = async function createManyBase(req: CrudRequest, dto: typeof cClass) {
-      const res = await this.service.createMany(req, dto, cClass, tClass);
+    this.targetProto[name] = async function createManyBase(
+      req: CrudRequest,
+      dto: typeof cClass,
+      routeParams?: Partial<typeof csClass>,
+    ) {
+      let dtoService = dto as typeof csClass;
+      if (routeParams) {
+        dtoService = { ...dtoService, ...routeParams };
+      }
+      const res = await this.service.createMany(req, dtoService);
       if (this.mapper && gClass) {
         return this.mapper.mapArray(res, tClass, gClass);
       } else {

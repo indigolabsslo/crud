@@ -85,37 +85,17 @@ export abstract class CrudService<T, C = T, R = T, U = T> {
 
   abstract getOne(req: CrudRequest): Promise<T>;
 
-  abstract createOne(
-    req: CrudRequest,
-    dto: C | Partial<C>,
-    cClass: new (...args: any[]) => C,
-    tClass: new (...args: any[]) => T,
-  ): Promise<T>;
+  abstract createOne(req: CrudRequest, dto: C): Promise<T>;
 
-  abstract createMany(
-    req: CrudRequest,
-    dto: CreateManyDto<C>,
-    cClass: new (...args: any[]) => C,
-    tClass: new (...args: any[]) => T,
-  ): Promise<T[]>;
+  abstract createMany(req: CrudRequest, dto: CreateManyDto<C>): Promise<T[]>;
 
-  abstract updateOne(
-    req: CrudRequest,
-    dto: U | Partial<U>,
-    uClass: new (...args: any[]) => U,
-    tClass: new (...args: any[]) => T,
-  ): Promise<T>;
+  abstract updateOne(req: CrudRequest, dto: U): Promise<T>;
 
-  abstract replaceOne(
-    req: CrudRequest,
-    dto: R | Partial<R>,
-    rClass: new (...args: any[]) => R,
-    tClass: new (...args: any[]) => T,
-  ): Promise<T>;
+  abstract replaceOne(req: CrudRequest, dto: R): Promise<T>;
 
   abstract deleteOne(req: CrudRequest): Promise<void | T>;
 
   abstract recoverOne(req: CrudRequest): Promise<void | T>;
 
-  abstract loadRelations(entity: T, dto: C | Partial<C> | R | Partial<R> | U | Partial<U>): Promise<T | Partial<T>>;
+  abstract loadRelations(entity: T, dto: C | R | U): Promise<T | Partial<T>>;
 }
